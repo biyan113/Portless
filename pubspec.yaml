@@ -1,0 +1,49 @@
+name: portless
+description: Portless — local port, process, and dev service manager
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  path: ^1.9.1
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.1
+  collection: ^1.19.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  # 可变字体（VF）：为同一文件声明多个 weight，Flutter 会按 wght 轴实例化，
+  # 使代码中的 FontWeight.w400/500/600/700 真正生效，否则全部退化为 Regular。
+  fonts:
+    - family: NotoSansSC
+      fonts:
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 300
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 600
+        - asset: assets/fonts/NotoSansSC-VF.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-VF.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-VF.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-VF.ttf
+          weight: 600
+        - asset: assets/fonts/JetBrainsMono-VF.ttf
+          weight: 700

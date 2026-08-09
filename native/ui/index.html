@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#0f1115"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>Portless</title>
+<style>
+  :root {
+    --bg:#0f1115; --surface:#161a21; --surface2:#1c222c; --border:#2a3140;
+    --text:#e8ecf2; --muted:#9aa3b2; --accent:#5b8cff; --accent-soft:rgba(91,140,255,.2);
+    --success:#3ddc97; --danger:#ff6b6b; --warn:#ffc857; --dev:#7c5cff;
+    --header-h:52px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin:0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background:var(--bg); color:var(--text);
+    height:100dvh; height:100vh;
+    display:flex; flex-direction:column;
+    padding-top:var(--safe-t);
+    padding-left:var(--safe-l);
+    padding-right:var(--safe-r);
+    overflow:hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  header {
+    min-height:var(--header-h); display:flex; align-items:center; gap:10px;
+    padding:8px 12px; flex-wrap:wrap;
+    background:var(--surface); border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  header h1 { font-size:16px; margin:0; font-weight:700; letter-spacing:.3px; flex-shrink:0; }
+  .badge {
+    font-size:11px; color:var(--muted); background:var(--surface2);
+    border:1px solid var(--border); border-radius:999px; padding:3px 8px; white-space:nowrap;
+  }
+  .header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
+  .header-meta { display:flex; align-items:center; gap:8px; }
+  input[type=search], input[type=text] {
+    background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    border-radius:8px; padding:8px 12px; font-size:16px; outline:none; min-width:0;
+    /* 16px avoids iOS zoom-on-focus */
+  }
+  #search { flex:1 1 160px; max-width:420px; min-width:120px; }
+  input:focus { border-color:var(--accent); }
+  button {
+    background:var(--surface2); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:8px 12px; font-size:13px; cursor:pointer;
+    min-height:36px; touch-action:manipulation; white-space:nowrap;
+  }
+  button:hover { border-color:var(--accent); }
+  button:active { opacity:.85; }
+  button.danger { color:var(--danger); }
+  button.warn { color:var(--warn); }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .layout { flex:1; display:flex; min-height:0; }
+  aside {
+    width:196px; background:var(--surface); border-right:1px solid var(--border);
+    padding:12px 8px; display:flex; flex-direction:column; gap:2px; flex-shrink:0;
+    overflow:auto;
+  }
+  .nav {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 10px; border-radius:8px; color:var(--muted); font-size:13px; cursor:pointer;
+    min-height:40px; user-select:none;
+  }
+  .nav.active { background:var(--accent-soft); color:var(--text); font-weight:600; }
+  .nav span { font-variant-numeric: tabular-nums; color:inherit; opacity:.85; }
+  main { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .table-head, .row {
+    display:grid;
+    grid-template-columns: 80px 140px 140px 72px 56px 64px 80px 1fr 36px;
+    gap:8px; align-items:center; padding:0 16px; font-size:13px;
+  }
+  .table-head {
+    height:36px; color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.6px;
+    background:var(--surface); border-bottom:1px solid var(--border); flex-shrink:0;
+  }
+  .rows { flex:1; overflow:auto; -webkit-overflow-scrolling:touch; }
+  .row {
+    min-height:40px; height:auto; border-bottom:1px solid rgba(42,49,64,.6); cursor:pointer;
+    padding-top:0; padding-bottom:0;
+  }
+  .row:hover { background:var(--surface2); }
+  .row.selected { background:var(--accent-soft); }
+  .row-mobile-meta { display:none; }
+  .dot { width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:8px; flex-shrink:0; }
+  .dot.dev { background:var(--dev); }
+  .dot.sys { background:var(--success); }
+  .muted { color:var(--muted); }
+  .ellipsis { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .star {
+    background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer;
+    min-height:40px; min-width:40px; padding:4px; touch-action:manipulation;
+  }
+  .star.on { color:var(--warn); }
+  inspector {
+    display:block; min-height:120px; max-height:42vh; overflow:auto;
+    background:var(--surface); border-top:1px solid var(--border);
+    padding:12px 16px;
+    padding-bottom:calc(12px + var(--safe-b));
+    -webkit-overflow-scrolling:touch; flex-shrink:0;
+  }
+  .ai-box {
+    margin-top:12px; padding:0; border-radius:10px;
+    background:var(--surface2); border:1px solid var(--border);
+    font-size:13px; line-height:1.5; overflow:hidden;
+  }
+  .ai-meta {
+    color:var(--muted); font-size:11px; padding:8px 12px;
+    border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .ai-grid {
+    display:grid;
+    grid-template-columns: 88px 1fr;
+    gap:0;
+  }
+  .ai-row { display:contents; }
+  .ai-label {
+    padding:9px 12px; color:var(--muted); font-size:11px; font-weight:600;
+    letter-spacing:.4px; border-bottom:1px solid rgba(42,49,64,.7);
+    background:rgba(0,0,0,.12);
+  }
+  .ai-value {
+    padding:9px 12px; color:var(--text); border-bottom:1px solid rgba(42,49,64,.7);
+    word-break:break-word;
+  }
+  .ai-value ul { margin:0; padding-left:18px; }
+  .ai-value li { margin:2px 0; }
+  .badge-stop {
+    display:inline-block; font-size:11px; font-weight:700; padding:2px 8px;
+    border-radius:999px; border:1px solid var(--border);
+  }
+  .badge-stop.safe { color:var(--success); border-color:rgba(61,220,151,.4); background:rgba(61,220,151,.12); }
+  .badge-stop.caution { color:var(--warn); border-color:rgba(255,200,87,.4); background:rgba(255,200,87,.12); }
+  .badge-stop.do_not { color:var(--danger); border-color:rgba(255,107,107,.4); background:rgba(255,107,107,.12); }
+  .badge-cat {
+    display:inline-block; font-size:11px; padding:2px 8px; border-radius:6px;
+    background:var(--accent-soft); color:var(--accent); font-weight:600;
+  }
+  .conf-bar {
+    display:inline-block; width:72px; height:6px; border-radius:999px;
+    background:#2a3140; vertical-align:middle; margin-right:8px; overflow:hidden;
+  }
+  .conf-bar > i { display:block; height:100%; background:var(--accent); border-radius:999px; }
+  button.ai { color:#c4b5fd; border-color:rgba(124,92,255,.45); }
+  button.ai:disabled { opacity:.55; cursor:wait; }
+  .ai-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .ai-dot.on { background:var(--success); }
+  .ai-dot.off { background:var(--danger); }
+  .insp-title { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .insp-title strong { font-size:16px; word-break:break-all; }
+  .insp-pid { margin-left:auto; }
+  .chip {
+    font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px;
+    background:rgba(124,92,255,.15); border:1px solid rgba(124,92,255,.35); color:var(--dev);
+  }
+  .chip.blue { background:rgba(91,140,255,.15); border-color:rgba(91,140,255,.35); color:var(--accent); }
+  .actions { margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; }
+  .actions button { flex:0 1 auto; }
+  .empty { color:var(--muted); text-align:center; padding:40px 16px; }
+  .toast {
+    position:fixed; bottom:calc(18px + var(--safe-b)); left:50%; right:auto;
+    transform:translateX(-50%);
+    max-width:min(92vw, 360px); text-align:center;
+    background:var(--surface2);
+    border:1px solid var(--border); padding:10px 14px; border-radius:8px; font-size:13px;
+    opacity:0; transition:opacity .2s; pointer-events:none; z-index:9;
+  }
+  .toast.show { opacity:1; }
+  dialog {
+    border:1px solid var(--border); border-radius:12px; background:var(--surface); color:var(--text);
+    padding:18px; width:min(420px, calc(100vw - 32px)); max-width:calc(100vw - 32px);
+    margin:auto;
+  }
+  dialog::backdrop { background:rgba(0,0,0,.45); }
+  .sep { height:1px; background:var(--border); margin:12px 8px; }
+  footer-note { margin-top:auto; padding:14px; color:var(--muted); font-size:11px; display:block; }
+
+  /* —— Mobile / narrow —— */
+  @media (max-width: 820px) {
+    header {
+      gap:8px;
+      padding:10px 12px;
+    }
+    header h1 { font-size:15px; }
+    .header-meta { width:100%; order:3; justify-content:space-between; }
+    #search { flex:1 1 100%; max-width:none; order:2; width:100%; font-size:16px; padding:10px 12px; }
+    .header-actions { margin-left:0; order:1; flex:1; justify-content:flex-end; }
+    .header-actions button { padding:8px 10px; font-size:12px; }
+
+    .layout { flex-direction:column; }
+
+    aside {
+      width:100%; border-right:none; border-bottom:1px solid var(--border);
+      padding:8px 10px; flex-direction:row; flex-wrap:nowrap;
+      gap:6px; overflow-x:auto; overflow-y:hidden;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    aside::-webkit-scrollbar { display:none; }
+    aside .sep, aside footer-note { display:none; }
+    .nav {
+      flex:0 0 auto; gap:8px; padding:8px 12px; min-height:36px;
+      background:var(--surface2); border:1px solid var(--border); white-space:nowrap;
+    }
+    .nav.active { border-color:var(--accent); }
+
+    .table-head { display:none; }
+
+    .row {
+      display:grid;
+      grid-template-columns: 1fr auto;
+      grid-template-areas:
+        "port star"
+        "process star"
+        "meta meta";
+      gap:2px 8px;
+      padding:12px 14px;
+      min-height:64px;
+      align-items:start;
+    }
+    .row > .c-port { grid-area:port; font-size:15px; display:flex; align-items:center; }
+    .row > .c-process { grid-area:process; font-size:13px; font-weight:500; }
+    .row > .c-project,
+    .row > .c-pid,
+    .row > .c-proto,
+    .row > .c-cpu,
+    .row > .c-mem,
+    .row > .c-addr { display:none; }
+    .row > .star { grid-area:star; align-self:center; }
+    .row-mobile-meta {
+      display:flex; grid-area:meta; flex-wrap:wrap; gap:6px 10px;
+      font-size:11px; color:var(--muted); margin-top:4px;
+    }
+    .row-mobile-meta b { color:var(--text); font-weight:500; }
+
+    inspector {
+      max-height:min(48vh, 420px);
+      min-height:100px;
+      padding:14px 14px calc(14px + var(--safe-b));
+    }
+    .insp-title strong { font-size:15px; }
+    .insp-pid { margin-left:0; width:100%; }
+    .actions { gap:8px; }
+    .actions button {
+      flex:1 1 calc(50% - 8px);
+      min-height:44px;
+      font-size:13px;
+      justify-content:center;
+    }
+    .ai-grid { grid-template-columns: 72px 1fr; }
+    .ai-label, .ai-value { padding:8px 10px; font-size:12px; }
+  }
+
+  @media (max-width: 400px) {
+    .actions button { flex:1 1 100%; }
+    .header-actions button#btnAuto { display:none; }
+  }
+
+  /* When inspector has selection on mobile, give it more room */
+  @media (max-width: 820px) {
+    body.has-selection inspector {
+      max-height:min(55vh, 520px);
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Portless</h1>
+  <div class="badge" id="countBadge">0 Listening</div>
+  <input id="search" type="search" placeholder="搜索端口 / 进程 / PID / 项目" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false"/>
+  <div class="header-actions">
+    <button id="btnFind" type="button">Find</button>
+    <button id="btnRefresh" type="button">刷新</button>
+    <button id="btnAuto" type="button" title="自动刷新">自动:开</button>
+  </div>
+  <div class="header-meta">
+    <span class="muted" id="aiStatus" style="font-size:11px"><span class="ai-dot off"></span>DeepSeek</span>
+    <span class="muted" id="scanTime" style="font-size:11px"></span>
+  </div>
+</header>
+<div class="layout">
+  <aside id="filters">
+    <div class="nav active" data-f="all">所有 <span id="c-all">0</span></div>
+    <div class="nav" data-f="dev">开发 <span id="c-dev">0</span></div>
+    <div class="nav" data-f="system">系统 <span id="c-sys">0</span></div>
+    <div class="nav" data-f="favorites">收藏 <span id="c-fav">0</span></div>
+    <div class="sep"></div>
+    <div class="nav" data-f="tcp">TCP <span id="c-tcp">0</span></div>
+    <div class="nav" data-f="udp">UDP <span id="c-udp">0</span></div>
+    <footer-note>Portless · local dev</footer-note>
+  </aside>
+  <main>
+    <div class="table-head">
+      <div>PORT</div><div>PROCESS</div><div>PROJECT</div><div>PID</div>
+      <div>PROTO</div><div>CPU</div><div>MEMORY</div><div>ADDRESS</div><div></div>
+    </div>
+    <div class="rows" id="rows"></div>
+    <inspector id="inspector">
+      <div class="empty">选择一行查看详情 · 端口是一等公民</div>
+    </inspector>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<dialog id="findDlg">
+  <form method="dialog" style="display:flex;flex-direction:column;gap:12px">
+    <strong style="font-size:16px">Find Port</strong>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="findPort" type="text" inputmode="numeric" pattern="[0-9]*" value="3000" style="flex:1;min-width:120px"/>
+      <button type="button" class="primary" id="doFind">查询</button>
+    </div>
+    <div id="findResult" class="muted" style="font-size:13px"></div>
+    <div style="display:flex;justify-content:flex-end">
+      <button value="cancel">关闭</button>
+    </div>
+  </form>
+</dialog>
+<script>
+const $ = (s) => document.querySelector(s);
+const favKey = 'portless.favorites';
+let items = [];
+let filter = 'all';
+let selectedKey = null;
+let auto = true;
+let favorites = new Set(JSON.parse(localStorage.getItem(favKey) || '[]'));
+let aiConfigured = false;
+let aiModel = 'deepseek-v4-flash';
+/** @type {Record<string, {data?: object, summary?: string, model?: string}>} */
+const explainCache = {};
+
+async function loadAiStatus() {
+  try {
+    const r = await fetch('/api/ai/status');
+    const j = await r.json();
+    aiConfigured = !!j.configured;
+    aiModel = j.model || aiModel;
+    const el = $('#aiStatus');
+    if (el) {
+      el.innerHTML = `<span class="ai-dot ${aiConfigured ? 'on' : 'off'}"></span>DeepSeek ${j.keyHint || ''} · ${aiModel}`;
+      el.title = aiConfigured ? `已配置 ${j.baseUrl}` : '未配置 DEEPSEEK_API_KEY';
+    }
+  } catch (_) {}
+}
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function mem(b) {
+  if (b == null) return '—';
+  if (b < 1024*1024) return Math.round(b/1024) + ' KB';
+  return Math.round(b/(1024*1024)) + ' MB';
+}
+function copyHost(addr) {
+  let a = (addr||'').replace(/^\[|\]$/g,'');
+  if (['0.0.0.0','*','::','::0','127.0.0.1','::1'].includes(a)) return 'localhost';
+  return a;
+}
+function keyOf(p) { return `${p.protocol}:${p.port}:${p.pid}`; }
+function displayName(p) { return p.stack || p.processName || 'unknown'; }
+function saveFav() { localStorage.setItem(favKey, JSON.stringify([...favorites])); }
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/list');
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    items = data.items || [];
+    $('#countBadge').textContent = `${items.length} Listening`;
+    if (data.scannedAtMs) {
+      const d = new Date(data.scannedAtMs);
+      $('#scanTime').textContent = d.toLocaleTimeString();
+    }
+    render();
+  } catch (e) {
+    toast('刷新失败: ' + e.message);
+  }
+}
+
+function filtered() {
+  const q = ($('#search').value || '').trim().toLowerCase();
+  let list = items.slice();
+  if (filter === 'dev') list = list.filter(p => p.isDev);
+  if (filter === 'system') list = list.filter(p => !p.isDev);
+  if (filter === 'favorites') list = list.filter(p => favorites.has(p.port));
+  if (filter === 'tcp') list = list.filter(p => p.protocol === 'tcp');
+  if (filter === 'udp') list = list.filter(p => p.protocol === 'udp');
+  if (q) {
+    list = list.filter(p =>
+      String(p.port).includes(q) ||
+      String(p.pid).includes(q) ||
+      (p.processName||'').toLowerCase().includes(q) ||
+      (p.stack||'').toLowerCase().includes(q) ||
+      (p.projectName||'').toLowerCase().includes(q) ||
+      (p.commandLine||'').toLowerCase().includes(q) ||
+      (p.address||'').toLowerCase().includes(q)
+    );
+  }
+  list.sort((a,b) => a.port - b.port || a.pid - b.pid);
+  return list;
+}
+
+function render() {
+  const list = filtered();
+  $('#c-all').textContent = items.length;
+  $('#c-dev').textContent = items.filter(p => p.isDev).length;
+  $('#c-sys').textContent = items.filter(p => !p.isDev).length;
+  $('#c-fav').textContent = items.filter(p => favorites.has(p.port)).length;
+  $('#c-tcp').textContent = items.filter(p => p.protocol === 'tcp').length;
+  $('#c-udp').textContent = items.filter(p => p.protocol === 'udp').length;
+
+  document.body.classList.toggle('has-selection', !!selectedKey);
+
+  const root = $('#rows');
+  if (!list.length) {
+    root.innerHTML = '<div class="empty">没有匹配的监听端口</div>';
+  } else {
+    root.innerHTML = list.map(p => {
+      const k = keyOf(p);
+      const sel = k === selectedKey ? 'selected' : '';
+      const fav = favorites.has(p.port) ? 'on' : '';
+      const addr = `${copyHost(p.address)}:${p.port}`;
+      const cpu = p.cpuUsage != null ? p.cpuUsage.toFixed(1)+'%' : '—';
+      const m = mem(p.memoryUsage);
+      const proto = (p.protocol||'').toUpperCase();
+      const proj = p.projectName || '—';
+      return `<div class="row ${sel}" data-key="${k}">
+        <div class="c-port"><span class="dot ${p.isDev?'dev':'sys'}"></span><strong>${p.port}</strong></div>
+        <div class="c-process ellipsis">${esc(displayName(p))}</div>
+        <div class="c-project muted ellipsis">${esc(proj)}</div>
+        <div class="c-pid muted">${p.pid}</div>
+        <div class="c-proto muted">${proto}</div>
+        <div class="c-cpu muted">${cpu}</div>
+        <div class="c-mem muted">${m}</div>
+        <div class="c-addr muted ellipsis">${esc(addr)}</div>
+        <button type="button" class="star ${fav}" data-fav="${p.port}" aria-label="收藏">★</button>
+        <div class="row-mobile-meta">
+          <span>PID <b>${p.pid}</b></span>
+          <span>${proto}</span>
+          <span>CPU <b>${cpu}</b></span>
+          <span>MEM <b>${m}</b></span>
+          ${p.projectName ? `<span class="ellipsis" style="max-width:40%">${esc(p.projectName)}</span>` : ''}
+          <span class="ellipsis" style="max-width:45%">${esc(addr)}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  root.querySelectorAll('.row').forEach(el => {
+    el.addEventListener('click', (ev) => {
+      if (ev.target.closest('[data-fav]')) return;
+      selectedKey = el.dataset.key;
+      render();
+      renderInspector();
+      // scroll inspector into view on mobile
+      if (window.matchMedia('(max-width: 820px)').matches) {
+        requestAnimationFrame(() => {
+          $('#inspector')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+      }
+    });
+  });
+  root.querySelectorAll('[data-fav]').forEach(btn => {
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const port = Number(btn.dataset.fav);
+      if (favorites.has(port)) favorites.delete(port); else favorites.add(port);
+      saveFav(); render();
+    });
+  });
+  renderInspector();
+}
+
+function selected() {
+  return items.find(p => keyOf(p) === selectedKey) || null;
+}
+
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+const STOP_LABEL = { safe: '可停', caution: '慎停', do_not: '勿动' };
+const CAT_LABEL = {
+  dev: '开发服务', system: '系统进程', database: '数据库',
+  proxy: '代理/隧道', runtime: '运行时', unknown: '未知',
+};
+
+/** Always render the same field order / layout from structured data. */
+function renderInsightCard(data, model) {
+  if (!data) return '<div class="ai-meta">无结构化数据</div>';
+  const stop = data.stopAdvice || 'caution';
+  const conf = Math.round((Number(data.confidence) || 0) * 100);
+  const actions = Array.isArray(data.actions) ? data.actions : [];
+  const risks = Array.isArray(data.risks) ? data.risks : [];
+  const list = (arr) => arr.length
+    ? `<ul>${arr.map(a => `<li>${esc(a)}</li>`).join('')}</ul>`
+    : '<span class="muted">—</span>';
+
+  return `
+    <div class="ai-meta">
+      <span>DeepSeek · ${esc(model || aiModel)}</span>
+      <span class="badge-cat">${esc(CAT_LABEL[data.category] || data.category || '未知')}</span>
+      <span class="badge-stop ${esc(stop)}">${esc(STOP_LABEL[stop] || stop)}</span>
+      <span>
+        <span class="conf-bar"><i style="width:${conf}%"></i></span>
+        置信度 ${conf}%
+      </span>
+    </div>
+    <div class="ai-grid">
+      <div class="ai-row"><div class="ai-label">结论</div><div class="ai-value"><strong>${esc(data.headline)}</strong></div></div>
+      <div class="ai-row"><div class="ai-label">服务</div><div class="ai-value">${esc(data.serviceName)}</div></div>
+      <div class="ai-row"><div class="ai-label">技术栈</div><div class="ai-value">${esc(data.stack)}</div></div>
+      <div class="ai-row"><div class="ai-label">用途</div><div class="ai-value">${esc(data.purpose)}</div></div>
+      <div class="ai-row"><div class="ai-label">开发服务</div><div class="ai-value">${data.isDevService ? '是' : '否'}</div></div>
+      <div class="ai-row"><div class="ai-label">停止建议</div><div class="ai-value"><span class="badge-stop ${esc(stop)}">${esc(STOP_LABEL[stop] || stop)}</span></div></div>
+      <div class="ai-row"><div class="ai-label">停止影响</div><div class="ai-value">${esc(data.stopImpact)}</div></div>
+      <div class="ai-row"><div class="ai-label">操作建议</div><div class="ai-value">${list(actions)}</div></div>
+      <div class="ai-row"><div class="ai-label">风险</div><div class="ai-value">${list(risks)}</div></div>
+      <div class="ai-row"><div class="ai-label">备注</div><div class="ai-value">${esc(data.notes || '—')}</div></div>
+    </div>`;
+}
+
+function renderInspector() {
+  const p = selected();
+  const box = $('#inspector');
+  if (!p) {
+    box.innerHTML = '<div class="empty">选择一行查看详情 · 端口是一等公民</div>';
+    return;
+  }
+  const addr = `${copyHost(p.address)}:${p.port}`;
+  const path = p.workingDirectory || p.executablePath || p.commandLine || '—';
+  const k = keyOf(p);
+  const cached = explainCache[k];
+  box.innerHTML = `
+    <div class="insp-title">
+      <strong>${esc(addr)}</strong>
+      <span class="chip">${esc(displayName(p))}</span>
+      ${p.projectName ? `<span class="chip blue">${esc(p.projectName)}</span>` : ''}
+      <span class="muted insp-pid">PID ${p.pid}</span>
+    </div>
+    <div class="muted ellipsis" style="margin-top:6px;font-size:12px">${esc(path)}</div>
+    ${p.commandLine ? `<div class="muted ellipsis" style="margin-top:4px;font-size:11px">${esc(p.commandLine)}</div>` : ''}
+    <div class="actions">
+      <button type="button" class="ai" data-act="explain" ${aiConfigured ? '' : 'title="未配置 DeepSeek"'}>AI 解读</button>
+      <button type="button" data-act="open">浏览器打开</button>
+      <button type="button" data-act="copy">复制地址</button>
+      ${p.executablePath ? `<button type="button" data-act="reveal">定位程序</button>` : ''}
+      <button type="button" class="warn" data-act="stop">停止进程</button>
+      <button type="button" class="danger" data-act="force">强制结束</button>
+    </div>
+    <div id="aiResult" class="ai-box" style="${cached ? '' : 'display:none'}">${
+      cached ? renderInsightCard(cached.data, cached.model) : ''
+    }</div>`;
+  box.querySelectorAll('[data-act]').forEach(btn => {
+    btn.addEventListener('click', () => onAction(btn.dataset.act, p));
+  });
+}
+
+async function onAction(act, p) {
+  const addr = `${copyHost(p.address)}:${p.port}`;
+  if (act === 'explain') {
+    const k = keyOf(p);
+    const box = $('#aiResult');
+    const btn = document.querySelector('[data-act="explain"]');
+    if (btn) { btn.disabled = true; btn.textContent = '解读中…'; }
+    if (box) {
+      box.style.display = 'block';
+      box.innerHTML = `<div class="ai-meta">DeepSeek 正在分析 :${p.port} / PID ${p.pid}…</div>`;
+    }
+    try {
+      const r = await fetch('/api/explain', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ process: p }),
+      });
+      const j = await r.json();
+      if (!j.ok) {
+        toast(j.message || 'AI 解读失败');
+        if (box) box.innerHTML = `<div class="ai-meta" style="color:var(--danger)">${esc(j.message || '失败')}</div>`;
+      } else {
+        explainCache[k] = { data: j.data, summary: j.summary, model: j.model };
+        aiModel = j.model || aiModel;
+        if (box) box.innerHTML = renderInsightCard(j.data, j.model);
+        toast('AI 解读完成');
+      }
+    } catch (e) {
+      toast('AI 请求异常: ' + e.message);
+      if (box) box.innerHTML = `<div class="ai-meta" style="color:var(--danger)">${e.message}</div>`;
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'AI 解读'; }
+    }
+    return;
+  }
+  if (act === 'copy') {
+    try {
+      await navigator.clipboard.writeText(addr);
+      toast('已复制 ' + addr);
+    } catch {
+      // fallback for non-secure contexts on LAN IP
+      const ta = document.createElement('textarea');
+      ta.value = addr; document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('已复制 ' + addr); }
+      catch { toast('复制失败: ' + addr); }
+      ta.remove();
+    }
+    return;
+  }
+  if (act === 'open') {
+    const host = copyHost(p.address) === 'localhost' ? '127.0.0.1' : copyHost(p.address);
+    // On mobile LAN, localhost is the phone itself — use page host when binding is *
+    let openHost = host;
+    if (host === '127.0.0.1' || host === 'localhost') {
+      const pageHost = location.hostname;
+      if (pageHost && pageHost !== 'localhost' && pageHost !== '127.0.0.1') {
+        openHost = pageHost;
+      }
+    }
+    window.open(`http://${openHost}:${p.port}`, '_blank');
+    return;
+  }
+  if (act === 'reveal' && p.executablePath) {
+    const r = await fetch('/api/reveal', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({path: p.executablePath})});
+    const j = await r.json(); toast(j.message || 'ok');
+    return;
+  }
+  if (act === 'stop' || act === 'force') {
+    const force = act === 'force';
+    if (!confirm(`${force ? '强制结束' : '停止'} PID ${p.pid}？\n${displayName(p)} · :${p.port}`)) return;
+    const r = await fetch('/api/kill', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pid: p.pid, force})});
+    const j = await r.json(); toast(j.message || (j.ok ? 'ok' : 'failed'));
+    setTimeout(refresh, 400);
+  }
+}
+
+document.querySelectorAll('.nav').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    filter = el.dataset.f;
+    render();
+  });
+});
+$('#search').addEventListener('input', render);
+$('#btnRefresh').addEventListener('click', refresh);
+$('#btnAuto').addEventListener('click', () => {
+  auto = !auto;
+  $('#btnAuto').textContent = auto ? '自动:开' : '自动:关';
+});
+$('#btnFind').addEventListener('click', () => $('#findDlg').showModal());
+$('#doFind').addEventListener('click', async () => {
+  const port = Number($('#findPort').value);
+  const [occ, free] = await Promise.all([
+    fetch('/api/find?port=' + port).then(r => r.json()),
+    fetch('/api/free?from=' + port + '&count=5').then(r => r.json()),
+  ]);
+  let html = '';
+  if (occ.items && occ.items.length) {
+    html += `<div style="color:var(--warn);font-weight:600;margin-bottom:8px">Port ${port} is occupied</div>`;
+    for (const p of occ.items) {
+      html += `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div><b>${esc(displayName(p))}</b></div>
+        <div class="muted">PID ${p.pid}</div>
+        <div class="muted">${esc(p.workingDirectory || p.executablePath || '')}</div>
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" data-k="${p.pid}" class="kill">Kill</button>
+          <button type="button" data-k="${p.pid}" class="force danger">Force Kill</button>
+        </div>
+      </div>`;
+    }
+  } else {
+    html += `<div style="color:var(--success);font-weight:600">Port ${port} is free</div>`;
+  }
+  if (free.nearest != null) {
+    html += `<div class="muted" style="margin-top:8px">Nearest available: ${free.nearest}</div>`;
+    html += `<div class="muted">Available: ${(free.available||[]).join(', ')}</div>`;
+  }
+  $('#findResult').innerHTML = html;
+  $('#findResult').querySelectorAll('.kill,.force').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const force = btn.classList.contains('force');
+      await fetch('/api/kill', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({pid: Number(btn.dataset.k), force})});
+      $('#doFind').click();
+      refresh();
+    });
+  });
+});
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault(); $('#search').focus();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+    e.preventDefault(); $('#findDlg').showModal();
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'r') {
+    e.preventDefault(); refresh();
+  }
+});
+loadAiStatus();
+refresh();
+setInterval(() => { if (auto) refresh(); }, 2000);
+</script>
+</body>
+</html>
