@@ -143,7 +143,7 @@ fn tcp_listeners() -> Result<Vec<PortProcess>, PlatformError> {
             TCP_TABLE_OWNER_PID_LISTENER,
             0,
         );
-        if err != NO_ERROR {
+        if err != NO_ERROR.0 {
             return Err(PlatformError::Message(format!(
                 "GetExtendedTcpTable error {err:?}"
             )));
@@ -200,7 +200,7 @@ fn udp_bound() -> Result<Vec<PortProcess>, PlatformError> {
             UDP_TABLE_OWNER_PID,
             0,
         );
-        if err != NO_ERROR {
+        if err != NO_ERROR.0 {
             return Err(PlatformError::Message(format!(
                 "GetExtendedUdpTable error {err:?}"
             )));
